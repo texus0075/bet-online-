@@ -77,18 +77,21 @@ export interface LeaderboardEntry {
   trustBadge: string;
 }
 
-export interface ArchitecturePhase {
+export interface OwnerRevenueStats {
+  totalWagered: number;
+  totalPayouts: number;
+  houseEdgeProfit: number;
+  pvpRakeEarned: number;
+  withdrawalFeesEarned: number;
+  netOwnerProfit: number;
+  activePlayersToday: number;
+}
+
+export interface TransactionRecord {
   id: string;
-  phaseNumber: number;
-  titleEn: string;
-  titleHi: string;
-  subtitleEn: string;
-  subtitleHi: string;
-  simpleExplanationHi: string;
-  simpleExplanationEn: string;
-  technicalDetails: string[];
-  antiCheatRole: string;
-  techInvolved: string[];
-  mockPayload: Record<string, any>;
-  mockResponse: Record<string, any>;
+  type: 'DEPOSIT' | 'WITHDRAW' | 'BET_CASINO' | 'WIN_CASINO' | 'BATTLE_STAKE' | 'BATTLE_WIN' | 'BATTLE_RAKE' | 'TOURNAMENT_ENTRY' | 'TOURNAMENT_PRIZE';
+  amount: number;
+  rake?: number;
+  description: string;
+  timestamp: string;
 }

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Volume2, VolumeX, Globe, PlusCircle, Flame, Trophy, Dices, TrendingUp, Play } from 'lucide-react';
-import { getSoundMuted, setSoundMuted, playCashChime } from '../utils/audio';
+import { Volume2, VolumeX, Globe, PlusCircle, ArrowDownRight, Flame, Trophy, Dices, TrendingUp, Play, PieChart } from 'lucide-react';
+import { getSoundMuted, setSoundMuted } from '../utils/audio';
 
 interface NavbarProps {
   activeView: 'SPORTSBOOK' | 'CRASH' | 'DICE' | 'GAME' | 'TOURNAMENTS';
@@ -8,7 +8,9 @@ interface NavbarProps {
   language: 'hinglish' | 'english';
   setLanguage: (lang: 'hinglish' | 'english') => void;
   walletBalance: number;
-  onQuickDeposit?: () => void;
+  onOpenDeposit: () => void;
+  onOpenWithdraw: () => void;
+  onOpenAdmin: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -17,7 +19,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   language,
   setLanguage,
   walletBalance,
-  onQuickDeposit,
+  onOpenDeposit,
+  onOpenWithdraw,
+  onOpenAdmin,
 }) => {
   const [isMuted, setIsMuted] = React.useState(getSoundMuted());
 
@@ -44,7 +48,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     },
     {
       id: 'DICE' as const,
-      labelEn: 'Dice Casino',
+      labelEn: 'Dice Arena',
       labelHi: 'रॉयल डाइस',
       icon: Dices,
       badge: 'HOT',
@@ -116,44 +120,63 @@ export const Navbar: React.FC<NavbarProps> = ({
           })}
         </nav>
 
-        {/* Primary Actions (Wallet, Deposit, Language, Audio) */}
+        {/* Primary Actions (Wallet, Deposit, Withdraw, Admin, Language, Sound) */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Wallet Balance Display & Quick Add */}
-          <div className="flex items-center gap-2 bg-slate-900 border border-emerald-500/30 px-3 py-1.5 rounded-xl">
+          {/* Wallet Balance Display */}
+          <div className="flex items-center gap-1.5 bg-slate-900 border border-emerald-500/30 px-2.5 py-1.5 rounded-xl">
             <div className="flex flex-col text-right">
-              <span className="text-[10px] text-slate-400 uppercase font-mono font-medium leading-none">
+              <span className="text-[9px] text-slate-400 uppercase font-mono font-medium leading-none">
                 {language === 'hinglish' ? 'वॉलेट' : 'Balance'}
               </span>
-              <span className="text-sm font-mono font-black text-emerald-400 leading-tight">
+              <span className="text-xs sm:text-sm font-mono font-black text-emerald-400 leading-tight">
                 ₹{walletBalance.toLocaleString()}
               </span>
             </div>
-
-            {onQuickDeposit && (
-              <button
-                onClick={onQuickDeposit}
-                className="p-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 transition-colors cursor-pointer"
-                title={language === 'hinglish' ? '₹500 डिपॉजिट करें' : 'Quick Deposit ₹500'}
-              >
-                <PlusCircle className="w-4 h-4" />
-              </button>
-            )}
           </div>
+
+          {/* Deposit Button */}
+          <button
+            onClick={onOpenDeposit}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-colors shadow-md shadow-emerald-500/20 cursor-pointer"
+            title={language === 'hinglish' ? 'पैसे जमा करें' : 'Deposit Cash'}
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{language === 'hinglish' ? 'डिपॉजिट' : 'Deposit'}</span>
+          </button>
+
+          {/* Withdraw Button */}
+          <button
+            onClick={onOpenWithdraw}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-amber-500/40 hover:border-amber-400 text-amber-300 font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
+            title={language === 'hinglish' ? 'पैसे निकालें' : 'Withdraw Cash'}
+          >
+            <ArrowDownRight className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{language === 'hinglish' ? 'विड्रॉल' : 'Withdraw'}</span>
+          </button>
+
+          {/* Admin Owner Panel Button */}
+          <button
+            onClick={onOpenAdmin}
+            className="p-2 rounded-xl bg-slate-900 border border-purple-500/40 hover:border-purple-400 text-purple-300 transition-colors cursor-pointer"
+            title={language === 'hinglish' ? 'मालिक का रेवेन्यू डैशबोर्ड' : 'Owner Revenue Dashboard'}
+          >
+            <PieChart className="w-4 h-4" />
+          </button>
 
           {/* Language Switcher */}
           <button
             onClick={() => setLanguage(language === 'hinglish' ? 'english' : 'hinglish')}
-            className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-amber-300 hover:border-slate-700 transition-all whitespace-nowrap cursor-pointer"
+            className="hidden sm:flex items-center gap-1 text-xs font-semibold px-2 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-amber-300 transition-all whitespace-nowrap cursor-pointer"
             title="Toggle Language"
           >
             <Globe className="w-3.5 h-3.5 text-amber-400" />
-            <span>{language === 'hinglish' ? 'Hinglish' : 'English'}</span>
+            <span>{language === 'hinglish' ? 'Hi' : 'En'}</span>
           </button>
 
           {/* Sound Toggle */}
           <button
             onClick={toggleSound}
-            className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
             title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
           >
             {isMuted ? <VolumeX className="w-4 h-4 text-slate-500" /> : <Volume2 className="w-4 h-4 text-amber-400" />}

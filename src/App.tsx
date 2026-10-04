@@ -11,14 +11,21 @@ import { AviatorCrashGame } from './components/AviatorCrashGame';
 import { DiceGame } from './components/DiceGame';
 import { BattingCanvasGame } from './components/BattingCanvasGame';
 import { MultiplayerTournaments } from './components/MultiplayerTournaments';
-import { PlayerStats } from './types';
-import { Play, Trophy, Flame, TrendingUp, Dices, PlusCircle, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
+import { DepositModal } from './components/DepositModal';
+import { WithdrawModal } from './components/WithdrawModal';
+import { AdminOwnerPanel } from './components/AdminOwnerPanel';
+import { PlayerStats, OwnerRevenueStats, TransactionRecord } from './types';
+import { Play, Trophy, Flame, TrendingUp, Dices, PlusCircle, ArrowDownRight, PieChart } from 'lucide-react';
 import { playCashChime } from './utils/audio';
 
 export default function App() {
   const [activeView, setActiveView] = useState<'SPORTSBOOK' | 'CRASH' | 'DICE' | 'GAME' | 'TOURNAMENTS'>('SPORTSBOOK');
   const [language, setLanguage] = useState<'hinglish' | 'english'>('hinglish');
+
+  // Modals
   const [depositModalOpen, setDepositModalOpen] = useState(false);
+  const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
 
   // Global Player stats
   const [playerStats, setPlayerStats] = useState<PlayerStats>({
@@ -34,24 +41,118 @@ export default function App() {
     antiCheatTrustScore: 100,
   });
 
-  const handleQuickDeposit = (amount: number = 500) => {
+  // Owner Revenue & Platform Financial Tracker
+  const [revenueStats, setRevenueStats] = useState<OwnerRevenueStats>({
+    totalWagered: 145000,
+    totalPayouts: 132400,
+    houseEdgeProfit: 7800,
+    pvpRakeEarned: 4600,
+    withdrawalFeesEarned: 1200,
+    netOwnerProfit: 13600,
+    activePlayersToday: 184,
+  });
+
+  // Live Audit Ledger Transactions
+  const [transactions, setTransactions] = useState<TransactionRecord[]>([
+    {
+      id: 'tx_1',
+      type: 'BATTLE_RAKE',
+      amount: 180,
+      rake: 20,
+      description: 'PVP SPS Battle Rake Collected (Rahul vs Amit)',
+      timestamp: '14:20:15',
+    },
+    {
+      id: 'tx_2',
+      type: 'WIN_CASINO',
+      amount: 1075,
+      description: 'Player Won Under 7 Bet (₹500 @ 2.15x)',
+      timestamp: '14:15:30',
+    },
+    {
+      id: 'tx_3',
+      type: 'BET_CASINO',
+      amount: 500,
+      description: 'Player Lost Over 7 Bet (₹500 to House)',
+      timestamp: '14:10:02',
+    },
+    {
+      id: 'tx_4',
+      type: 'DEPOSIT',
+      amount: 2000,
+      description: 'UPI Deposit via PhonePe (UTR 42198031)',
+      timestamp: '14:02:11',
+    },
+  ]);
+
+  const handleRecordTransaction = (tx: TransactionRecord) => {
+    setTransactions(prev => [tx, ...prev.slice(0, 49)]);
+  };
+
+  const handleUpdateOwnerRevenue = (wager: number, payout: number, pvpRake: number, houseEdge: number) => {
+    setRevenueStats(prev => {
+      const newWagered = prev.totalWagered + wager;
+      const newPayouts = prev.totalPayouts + payout;
+      const newHouseEdge = prev.houseEdgeProfit + houseEdge;
+      const newPvpRake = prev.pvpRakeEarned + pvpRake;
+      const newNetProfit = newHouseEdge + newPvpRake + prev.withdrawalFeesEarned;
+      return {
+        ...prev,
+        totalWagered: newWagered,
+        totalPayouts: newPayouts,
+        houseEdgeProfit: newHouseEdge,
+        pvpRakeEarned: newPvpRake,
+        netOwnerProfit: newNetProfit,
+      };
+    });
+  };
+
+  const handleDepositSuccess = (amount: number) => {
     setPlayerStats(prev => ({
       ...prev,
       walletBalance: prev.walletBalance + amount,
     }));
-    playCashChime();
+    handleRecordTransaction({
+      id: Date.now().toString(),
+      type: 'DEPOSIT',
+      amount,
+      description: `Instant UPI Deposit (+₹${amount})`,
+      timestamp: new Date().toLocaleTimeString(),
+    });
+  };
+
+  const handleWithdrawSuccess = (amount: number, fee: number) => {
+    setPlayerStats(prev => ({
+      ...prev,
+      walletBalance: prev.walletBalance - amount,
+    }));
+    setRevenueStats(prev => ({
+      ...prev,
+      withdrawalFeesEarned: prev.withdrawalFeesEarned + fee,
+      netOwnerProfit: prev.netOwnerProfit + fee,
+    }));
+    handleRecordTransaction({
+      id: Date.now().toString(),
+      type: 'WITHDRAW',
+      amount: amount - fee,
+      rake: fee,
+      description: `Bank Withdrawal Dispatched (Fee: ₹${fee})`,
+      timestamp: new Date().toLocaleTimeString(),
+    });
   };
 
   return (
     <div className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col font-body antialiased">
-      {/* Navbar with 5 real gaming modes & wallet */}
+      {/* Navbar with deposit/withdraw/admin modal triggers */}
       <Navbar
         activeView={activeView}
         setActiveView={setActiveView}
         language={language}
         setLanguage={setLanguage}
         walletBalance={playerStats.walletBalance}
-        onQuickDeposit={() => handleQuickDeposit(500)}
+        onOpenDeposit={() => setDepositModalOpen(true)}
+        onOpenWithdraw={() => setWithdrawModalOpen(true)}
+        onOpenAdmin={() => setAdminPanelOpen(true)}
       />
 
       {/* Main Container */}
@@ -154,8 +255,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* Quick Balance & VIP Status Card */}
-            <div className="bg-slate-950/80 border border-slate-800 p-5 rounded-2xl flex flex-col gap-3 min-w-[240px] shrink-0">
+            {/* Quick Balance & Fast Actions Card */}
+            <div className="bg-slate-950/80 border border-slate-800 p-5 rounded-2xl flex flex-col gap-3 min-w-[250px] shrink-0">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-400 font-semibold">{language === 'hinglish' ? 'आपका वॉलेट:' : 'Your Wallet:'}</span>
                 <span className="text-xs font-bold text-amber-400">VIP ELITE</span>
@@ -164,26 +265,34 @@ export default function App() {
                 ₹{playerStats.walletBalance.toLocaleString()}
               </div>
 
+              {/* Deposit and Withdraw Action Buttons */}
               <div className="flex items-center gap-2 pt-1">
                 <button
-                  onClick={() => handleQuickDeposit(500)}
-                  className="flex-1 py-2 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  onClick={() => setDepositModalOpen(true)}
+                  className="flex-1 py-2 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
-                  <span>+ ₹500</span>
+                  <span>{language === 'hinglish' ? 'डिपॉजिट' : 'Deposit'}</span>
                 </button>
                 <button
-                  onClick={() => handleQuickDeposit(2000)}
-                  className="flex-1 py-2 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  onClick={() => setWithdrawModalOpen(true)}
+                  className="flex-1 py-2 px-3 rounded-xl bg-slate-900 border border-amber-500/40 hover:border-amber-400 text-amber-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>+ ₹2,000</span>
+                  <ArrowDownRight className="w-3.5 h-3.5" />
+                  <span>{language === 'hinglish' ? 'विड्रॉल' : 'Withdraw'}</span>
                 </button>
               </div>
 
-              <div className="text-[10px] text-slate-500 flex items-center justify-between pt-1 border-t border-slate-800/80">
-                <span>Win Rate: {playerStats.winRate}%</span>
-                <span>Matches: {playerStats.matchesPlayed}</span>
+              {/* Owner revenue shortcut */}
+              <div className="text-[11px] text-slate-400 flex items-center justify-between pt-2 border-t border-slate-800/80">
+                <span>Net Owner Profit:</span>
+                <button
+                  onClick={() => setAdminPanelOpen(true)}
+                  className="text-emerald-400 font-mono font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>₹{revenueStats.netOwnerProfit.toLocaleString()}</span>
+                  <PieChart className="w-3 h-3 text-purple-400" />
+                </button>
               </div>
             </div>
           </div>
@@ -216,6 +325,8 @@ export default function App() {
               language={language}
               playerStats={playerStats}
               setPlayerStats={setPlayerStats}
+              onRecordTransaction={handleRecordTransaction}
+              onUpdateOwnerRevenue={handleUpdateOwnerRevenue}
             />
           </section>
         )}
@@ -244,6 +355,32 @@ export default function App() {
 
       {/* Footer */}
       <Footer language={language} setActiveView={setActiveView} />
+
+      {/* Real-Money Deposit Modal */}
+      <DepositModal
+        isOpen={depositModalOpen}
+        onClose={() => setDepositModalOpen(false)}
+        language={language}
+        onDepositSuccess={handleDepositSuccess}
+      />
+
+      {/* Real-Money Withdrawal Modal (1% Fee) */}
+      <WithdrawModal
+        isOpen={withdrawModalOpen}
+        onClose={() => setWithdrawModalOpen(false)}
+        language={language}
+        walletBalance={playerStats.walletBalance}
+        onWithdrawSuccess={handleWithdrawSuccess}
+      />
+
+      {/* Platform Owner Revenue & Control Dashboard */}
+      <AdminOwnerPanel
+        isOpen={adminPanelOpen}
+        onClose={() => setAdminPanelOpen(false)}
+        language={language}
+        revenueStats={revenueStats}
+        transactions={transactions}
+      />
     </div>
   );
 }
