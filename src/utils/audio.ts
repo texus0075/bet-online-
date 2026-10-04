@@ -166,3 +166,54 @@ export function playCashChime() {
     });
   } catch (e) {}
 }
+
+// Crisp dice rolling / tumbling shaker sound
+export function playDiceRoll() {
+  if (isMuted) return;
+  try {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+    for (let i = 0; i < 6; i++) {
+      const delay = i * 0.06 + Math.random() * 0.02;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(400 + Math.random() * 200, t + delay);
+      osc.frequency.exponentialRampToValueAtTime(100, t + delay + 0.05);
+
+      gain.gain.setValueAtTime(0.3, t + delay);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + delay + 0.05);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(t + delay);
+      osc.stop(t + delay + 0.05);
+    }
+  } catch (e) {}
+}
+
+// Low buzzer sound for loss
+export function playLossBuzzer() {
+  if (isMuted) return;
+  try {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(130, t);
+    osc.frequency.exponentialRampToValueAtTime(80, t + 0.35);
+
+    gain.gain.setValueAtTime(0.25, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.35);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(t);
+    osc.stop(t + 0.35);
+  } catch (e) {}
+}
