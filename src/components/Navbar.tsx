@@ -1,10 +1,10 @@
 import React from 'react';
-import { Volume2, VolumeX, Globe, PlusCircle, ArrowDownRight, Flame, Trophy, Dices, TrendingUp, Play, PieChart } from 'lucide-react';
+import { Volume2, VolumeX, Globe, PlusCircle, ArrowDownRight, Flame, Dices, PieChart } from 'lucide-react';
 import { getSoundMuted, setSoundMuted } from '../utils/audio';
 
 interface NavbarProps {
-  activeView: 'SPORTSBOOK' | 'CRASH' | 'DICE' | 'GAME' | 'TOURNAMENTS';
-  setActiveView: (view: 'SPORTSBOOK' | 'CRASH' | 'DICE' | 'GAME' | 'TOURNAMENTS') => void;
+  activeView: 'DICE' | 'CRASH';
+  setActiveView: (view: 'DICE' | 'CRASH') => void;
   language: 'hinglish' | 'english';
   setLanguage: (lang: 'hinglish' | 'english') => void;
   walletBalance: number;
@@ -33,39 +33,18 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const navLinks = [
     {
-      id: 'SPORTSBOOK' as const,
-      labelEn: 'Sportsbook',
-      labelHi: '1xBet स्पोर्ट्सबुक',
-      icon: TrendingUp,
-      badge: 'LIVE',
+      id: 'DICE' as const,
+      labelEn: 'Royal Dice Arena',
+      labelHi: 'रॉयल डाइस अरीना',
+      icon: Dices,
+      badge: 'HOT · 3 MODES',
     },
     {
       id: 'CRASH' as const,
       labelEn: 'Aviator Crash',
-      labelHi: 'एविएटर क्रैश',
+      labelHi: 'एविएटर 50X क्रैश',
       icon: Flame,
-      badge: '50X',
-    },
-    {
-      id: 'DICE' as const,
-      labelEn: 'Dice Arena',
-      labelHi: 'रॉयल डाइस',
-      icon: Dices,
-      badge: 'HOT',
-    },
-    {
-      id: 'GAME' as const,
-      labelEn: 'Cricket Arcade',
-      labelHi: 'क्रिकेट बैटिंग',
-      icon: Play,
-      badge: '60FPS',
-    },
-    {
-      id: 'TOURNAMENTS' as const,
-      labelEn: 'Tournaments',
-      labelHi: 'टूर्नामेंट्स',
-      icon: Trophy,
-      badge: '₹1.5L',
+      badge: 'PROVABLY FAIR',
     },
   ];
 
@@ -74,10 +53,10 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         {/* Brand Wordmark */}
         <button
-          onClick={() => setActiveView('SPORTSBOOK')}
-          className="flex items-center gap-2 text-lg sm:text-xl font-extrabold font-display tracking-tight text-slate-100 hover:text-amber-400 transition-colors whitespace-nowrap cursor-pointer group"
+          onClick={() => setActiveView('DICE')}
+          className="flex items-center gap-2.5 text-lg sm:text-xl font-extrabold font-display tracking-tight text-slate-100 hover:text-amber-400 transition-colors whitespace-nowrap cursor-pointer group"
         >
-          <span className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-slate-950 font-black shadow-md shadow-amber-500/20 group-hover:scale-105 transition-transform">
+          <span className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-slate-950 font-black shadow-md shadow-amber-500/20 group-hover:scale-105 transition-transform text-sm">
             ⚡
           </span>
           <span className="bg-gradient-to-r from-amber-400 via-amber-200 to-slate-100 bg-clip-text text-transparent">
@@ -85,8 +64,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           </span>
         </button>
 
-        {/* Clean Gaming Navigation Links */}
-        <nav className="hidden lg:flex items-center gap-6 text-xs sm:text-sm font-semibold text-slate-300">
+        {/* Clean 100% Real Games Navigation */}
+        <nav className="hidden sm:flex items-center gap-4 text-xs sm:text-sm font-semibold text-slate-300">
           {navLinks.map((link) => {
             const Icon = link.icon;
             const isActive = activeView === link.id;
@@ -94,10 +73,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 key={link.id}
                 onClick={() => setActiveView(link.id)}
-                className={`flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer py-1 ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
                   isActive
-                    ? 'text-amber-400 font-bold border-b-2 border-amber-400'
-                    : 'text-slate-400 hover:text-slate-100'
+                    ? 'bg-amber-500/15 text-amber-400 font-bold border border-amber-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/60'
                 }`}
               >
                 <Icon className={`w-4 h-4 ${isActive ? 'text-amber-400' : 'text-slate-500'}`} />
@@ -105,9 +84,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {link.badge && (
                   <span
                     className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
-                      link.badge === 'LIVE'
-                        ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse'
-                        : link.badge === 'HOT'
+                      link.id === 'DICE'
                         ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                         : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                     }`}
@@ -123,7 +100,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Primary Actions (Wallet, Deposit, Withdraw, Admin, Language, Sound) */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Wallet Balance Display */}
-          <div className="flex items-center gap-1.5 bg-slate-900 border border-emerald-500/30 px-2.5 py-1.5 rounded-xl">
+          <div className="flex items-center gap-1.5 bg-slate-900 border border-emerald-500/30 px-3 py-1.5 rounded-xl">
             <div className="flex flex-col text-right">
               <span className="text-[9px] text-slate-400 uppercase font-mono font-medium leading-none">
                 {language === 'hinglish' ? 'वॉलेट' : 'Balance'}
@@ -184,8 +161,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Mobile Secondary Nav Strip */}
-      <div className="lg:hidden flex items-center gap-2 overflow-x-auto px-4 py-2 border-t border-slate-800/60 bg-[#090e1c] text-xs font-medium text-slate-400 scrollbar-none">
+      {/* Mobile Nav Strip */}
+      <div className="sm:hidden flex items-center gap-2 overflow-x-auto px-4 py-2 border-t border-slate-800/60 bg-[#090e1c] text-xs font-medium text-slate-400">
         {navLinks.map((link) => {
           const Icon = link.icon;
           const isActive = activeView === link.id;
@@ -193,7 +170,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               key={link.id}
               onClick={() => setActiveView(link.id)}
-              className={`whitespace-nowrap px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-colors ${
+              className={`flex-1 py-1.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-colors ${
                 isActive
                   ? 'bg-amber-500/20 text-amber-400 font-bold border border-amber-500/40'
                   : 'text-slate-400 hover:text-slate-200 bg-slate-900/50'

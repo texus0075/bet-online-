@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, TrendingUp, DollarSign, ShieldCheck, RefreshCw, Award, CheckCircle2, Lock, ArrowUpRight } from 'lucide-react';
-import { PlayerStats } from '../types';
-import { playCashChime } from '../utils/audio';
+import { PlayerStats, TransactionRecord } from '../types';
+import { playCashChime, playLossBuzzer } from '../utils/audio';
 
 interface AviatorCrashProps {
   language: 'hinglish' | 'english';
   playerStats: PlayerStats;
   setPlayerStats: React.Dispatch<React.SetStateAction<PlayerStats>>;
+  onRecordTransaction?: (tx: TransactionRecord) => void;
+  onUpdateOwnerRevenue?: (wager: number, payout: number, pvpRake: number, houseEdge: number) => void;
 }
 
 interface CrashHistory {
@@ -19,6 +21,8 @@ export const AviatorCrashGame: React.FC<AviatorCrashProps> = ({
   language,
   playerStats,
   setPlayerStats,
+  onRecordTransaction,
+  onUpdateOwnerRevenue,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -109,6 +113,21 @@ export const AviatorCrashGame: React.FC<AviatorCrashProps> = ({
       // Check crash condition
       if (currentMult >= crashPointRef.current) {
         setGameState('CRASHED');
+        if (betPlaced && !cashedOut) {
+          playLossBuzzer();
+          if (onRecordTransaction) {
+            onRecordTransaction({
+              id: Date.now().toString(),
+              type: 'BET_CASINO',
+              amount: stake,
+              description: `Aviator Crashed @ ${crashPointRef.current}x (Lost ₹${stake})`,
+              timestamp: new Date().toLocaleTimeString(),
+            });
+          }
+          if (onUpdateOwnerRevenue) {
+            onUpdateOwnerRevenue(stake, 0, 0, stake);
+          }
+        }
         setBetPlaced(false);
         setHistory((prev) => [
           { id: Date.now().toString(), multiplier: crashPointRef.current, time: 'Just now' },
@@ -127,13 +146,23 @@ export const AviatorCrashGame: React.FC<AviatorCrashProps> = ({
   // Place bet
   const handlePlaceBet = () => {
     if (playerStats.walletBalance < stake) {
-      alert('Insufficient wallet balance!');
+      alert(language === 'hinglish' ? 'वॉलेट में बैलेंस कम है!' : 'Insufficient wallet balance!');
       return;
     }
     setBetPlaced(true);
     setCashedOut(false);
     setWonAmount(null);
     setPlayerStats((p) => ({ ...p, walletBalance: p.walletBalance - stake }));
+
+    if (onRecordTransaction) {
+      onRecordTransaction({
+        id: Date.now().toString(),
+        type: 'BET_CASINO',
+        amount: stake,
+        description: `Aviator Flight Bet Placed (₹${stake})`,
+        timestamp: new Date().toLocaleTimeString(),
+      });
+    }
 
     if (gameState === 'IDLE' || gameState === 'CRASHED') {
       startNextRound();
@@ -150,6 +179,19 @@ export const AviatorCrashGame: React.FC<AviatorCrashProps> = ({
     setWonAmount(payout);
     setPlayerStats((p) => ({ ...p, walletBalance: p.walletBalance + payout }));
     playCashChime();
+
+    if (onRecordTransaction) {
+      onRecordTransaction({
+        id: Date.now().toString(),
+        type: 'WIN_CASINO',
+        amount: payout,
+        description: `Aviator Cashed Out @ ${finalMult}x (Won ₹${payout})`,
+        timestamp: new Date().toLocaleTimeString(),
+      });
+    }
+    if (onUpdateOwnerRevenue) {
+      onUpdateOwnerRevenue(stake, payout, 0, 0);
+    }
   };
 
   // Canvas visual rendering of the soaring curve

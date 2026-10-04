@@ -1,9 +1,9 @@
 import React from 'react';
-import { ShieldCheck, Award, Lock, HelpCircle, PhoneCall, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Lock, PhoneCall, CheckCircle2 } from 'lucide-react';
 
 interface FooterProps {
   language: 'hinglish' | 'english';
-  setActiveView: (view: 'SPORTSBOOK' | 'CRASH' | 'DICE' | 'GAME' | 'TOURNAMENTS') => void;
+  setActiveView: (view: 'DICE' | 'CRASH') => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({ language, setActiveView }) => {
@@ -18,71 +18,55 @@ export const Footer: React.FC<FooterProps> = ({ language, setActiveView }) => {
                 ⚡
               </span>
               <span className="text-base font-black font-display text-slate-100 tracking-tight">
-                CricStrike VIP
+                CricStrike VIP Casino
               </span>
             </div>
             <p className="text-slate-400 max-w-md text-xs leading-relaxed">
               {language === 'hinglish'
-                ? 'भारत का प्रमुख ऑनलाइन बेटिंग और गेमिंग प्लेटफॉर्म। 1xBet ऑड्स, एविएटर 50X क्रैश, रॉयल डाइस और 60FPS क्रिकेट बैटिंग।'
-                : 'Premier Online Sportsbook, Aviator Multiplier, Royal Dice & High-Fidelity Cricket Gaming Platform.'}
+                ? 'भारत का 100% वेरिफाइड रियल-मनी कसीनो व डाइस प्लेटफॉर्म। 50X एविएटर क्रैश, 3D रॉयल डाइस बेटिंग, 10% रेक PVP बैटल व तुरंत UPI विड्रॉल।'
+                : 'Premier Verified Real-Money Casino & Dice Arena. 50X Aviator Multiplier, 3D Royal Dice Over/Under 7, 10% Rake PVP Battles & Instant UPI Payouts.'}
             </p>
             <div className="flex items-center gap-3 pt-1">
               <span className="px-2.5 py-1 rounded-md bg-rose-500/10 border border-rose-500/30 text-rose-400 font-bold text-[10px]">
                 18+ ONLY
               </span>
               <span className="px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-[10px] flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" /> PROVABLY FAIR RNG
+                <CheckCircle2 className="w-3 h-3" /> PROVABLY FAIR 98.2% RTP
               </span>
               <span className="px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold text-[10px]">
-                INSTANT UPI PAYOUTS
+                INSTANT UPI AUTO-PAYOUT
               </span>
             </div>
           </div>
 
-          {/* Games Quick Jump */}
+          {/* Real Games Links */}
           <div className="space-y-2.5">
             <div className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-              {language === 'hinglish' ? 'गेम्स और मार्केट्स' : 'Games & Arena'}
+              {language === 'hinglish' ? 'रियल-मनी गेम्स' : 'Active Games'}
             </div>
             <ul className="space-y-2 text-xs">
               <li>
                 <button
-                  onClick={() => setActiveView('SPORTSBOOK')}
-                  className="hover:text-amber-400 transition-colors cursor-pointer"
+                  onClick={() => setActiveView('DICE')}
+                  className="hover:text-amber-400 transition-colors cursor-pointer text-left"
                 >
-                  {language === 'hinglish' ? '1xBet स्पोर्ट्सबुक (लाइव क्रिकेट)' : '1xBet Sportsbook'}
+                  {language === 'hinglish' ? '🎲 रॉयल डाइस अरीना (कैसीनो 7 व बैटल)' : '🎲 Royal Dice Arena (Casino 7 & PVP)'}
                 </button>
               </li>
               <li>
                 <button
                   onClick={() => setActiveView('CRASH')}
-                  className="hover:text-amber-400 transition-colors cursor-pointer"
+                  className="hover:text-amber-400 transition-colors cursor-pointer text-left"
                 >
-                  {language === 'hinglish' ? 'एविएटर 50X क्रैश' : 'Aviator 50X Crash'}
+                  {language === 'hinglish' ? '🚀 एविएटर क्रैश (50X मल्टीप्लायर)' : '🚀 Aviator Crash (50X Flight)'}
                 </button>
               </li>
               <li>
                 <button
                   onClick={() => setActiveView('DICE')}
-                  className="hover:text-amber-400 transition-colors cursor-pointer"
+                  className="hover:text-amber-400 transition-colors cursor-pointer text-left"
                 >
-                  {language === 'hinglish' ? 'रॉयल 3D डाइस व ओवर-अंडर 7' : 'Royal 3D Dice Casino'}
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => setActiveView('GAME')}
-                  className="hover:text-amber-400 transition-colors cursor-pointer"
-                >
-                  {language === 'hinglish' ? 'क्रिकेट बैटिंग आर्केड' : 'Cricket Batting Arcade'}
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => setActiveView('TOURNAMENTS')}
-                  className="hover:text-amber-400 transition-colors cursor-pointer"
-                >
-                  {language === 'hinglish' ? 'वीकली टूर्नामेंट्स व लीडरबोर्ड' : 'Weekly Tournaments'}
+                  {language === 'hinglish' ? '🏆 10-रोल्स वीकली मेगा टूर्नामेंट' : '🏆 10-Rolls Weekly Championship'}
                 </button>
               </li>
             </ul>
@@ -96,20 +80,20 @@ export const Footer: React.FC<FooterProps> = ({ language, setActiveView }) => {
             <ul className="space-y-2 text-xs text-slate-400">
               <li className="flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5 text-emerald-400" />
-                <span>256-Bit SSL Encrypted Escrow</span>
+                <span>256-Bit Escrow Vault</span>
               </li>
               <li className="flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                <span>Certified Random Number Generator</span>
+                <span>SHA-256 Provably Fair Randomness</span>
               </li>
               <li className="flex items-center gap-1.5">
                 <PhoneCall className="w-3.5 h-3.5 text-sky-400" />
-                <span>24x7 VIP Support & Telegram</span>
+                <span>24x7 Priority VIP Support</span>
               </li>
               <li className="text-[11px] text-slate-500 pt-1">
                 {language === 'hinglish'
-                  ? 'कृपया जिम्मेदारी से खेलें। लत लगने का जोखिम हो सकता है।'
-                  : 'Play responsibly. Terms & Conditions apply.'}
+                  ? 'जिम्मेदारी से खेलें। यह गेम 18 वर्ष से अधिक आयु के उपयोगकर्ताओं के लिए है।'
+                  : 'Play responsibly. 18+ Users only.'}
               </li>
             </ul>
           </div>
@@ -121,11 +105,11 @@ export const Footer: React.FC<FooterProps> = ({ language, setActiveView }) => {
             © {new Date().getFullYear()} CricStrike VIP. All rights reserved.
           </div>
           <div className="flex items-center gap-4">
-            <span>Fair Play Certified</span>
+            <span>100% Certified Math</span>
             <span>·</span>
-            <span>Zero Withdrawal Fees</span>
+            <span>Zero Withdrawal Commission Leak</span>
             <span>·</span>
-            <span>Instant Auto-Settlement</span>
+            <span>Instant UPI & IMPS</span>
           </div>
         </div>
       </div>
