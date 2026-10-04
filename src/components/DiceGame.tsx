@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Dices, Trophy, Swords, Sparkles, DollarSign, ShieldCheck, Flame, Percent, CheckCircle2, UserCheck, AlertCircle, Award } from 'lucide-react';
-import { PlayerStats, TransactionRecord, OwnerRevenueStats } from '../types';
+import React, { useState, useRef } from 'react';
+import { Dices, Trophy, Swords, Sparkles, DollarSign, ShieldCheck, Flame, Percent, CheckCircle2, UserCheck, AlertCircle, Award, Search, XCircle } from 'lucide-react';
+import { PlayerStats, TransactionRecord, OwnerRevenueStats, UserProfile } from '../types';
 import { playDiceRoll, playCashChime, playLossBuzzer } from '../utils/audio';
 
 interface DiceGameProps {
@@ -8,7 +8,15 @@ interface DiceGameProps {
   playerStats: PlayerStats;
   setPlayerStats: React.Dispatch<React.SetStateAction<PlayerStats>>;
   onRecordTransaction?: (tx: TransactionRecord) => void;
-  onUpdateOwnerRevenue?: (wager: number, payout: number, pvpRake: number, houseEdge: number) => void;
+  onUpdateOwnerRevenue?: (
+    wager: number,
+    payout: number,
+    pvpRake: number,
+    houseEdge: number,
+    tournamentMargin?: number,
+    referralMargin?: number
+  ) => void;
+  userProfile?: UserProfile;
 }
 
 const faceRotationMap: Record<number, string> = {
@@ -85,9 +93,13 @@ export const DiceGame: React.FC<DiceGameProps> = ({
   setPlayerStats,
   onRecordTransaction,
   onUpdateOwnerRevenue,
+  userProfile,
 }) => {
   // Modes: 1. Casino Over/Under 7 | 2. PVP Battle (SPS with 10% Rake) | 3. Weekly Tournament (10 Rolls Ticket)
   const [activeTab, setActiveTab] = useState<'BETTING' | 'SPS' | 'TOURNAMENT'>('BETTING');
+
+  // Bankroll safety cap: ₹1,000 max single bet
+  const MAX_BET_CAP = 1000;
 
   // =========================================================================
   // 1. CASINO 7 BETTING MODE (Mathematically Sound House Edge: 5% - 8%)
@@ -131,6 +143,10 @@ export const DiceGame: React.FC<DiceGameProps> = ({
 
   const handleRollBet = () => {
     if (isRolling) return;
+    if (betStake > MAX_BET_CAP) {
+      alert(language === 'hinglish' ? `सुरक्षा नियम: प्लेटफॉर्म बैंक सुरक्षा के लिए अधिकतम दांव ₹${MAX_BET_CAP} सीमित है।` : `Bankroll safety: Max bet is ₹${MAX_BET_CAP}.`);
+      return;
+    }
     if (playerStats.walletBalance < betStake) {
       alert(language === 'hinglish' ? 'वॉलेट में बैलेंस कम है! कृपया बैलेंस रीचार्ज करें।' : 'Insufficient balance! Please add funds.');
       return;
@@ -181,7 +197,7 @@ export const DiceGame: React.FC<DiceGameProps> = ({
         playLossBuzzer();
       }
 
-      // Record in live transactions
+      // Record in live audit transactions with player details
       if (onRecordTransaction) {
         onRecordTransaction({
           id: Date.now().toString(),
@@ -189,6 +205,9 @@ export const DiceGame: React.FC<DiceGameProps> = ({
           amount: won ? payout : betStake,
           description: won ? `Casino Win (${betType} @ ${odds}x)` : `Casino Bet Lost (${betType})`,
           timestamp: new Date().toLocaleTimeString(),
+          username: userProfile?.username || '@Tiger_King99',
+          mobile: userProfile?.mobile,
+          location: userProfile?.location || 'Jaipur, RJ',
         });
       }
 
@@ -214,16 +233,30 @@ export const DiceGame: React.FC<DiceGameProps> = ({
 
   // =========================================================================
   // 2. STONE PAPER SCISSORS PVP BATTLE (10% Rake Commission)
+  // Matchmaking: Find Opponent First -> Confirm Match -> Deduct Stake
   // =========================================================================
   const [spsStake, setSpsStake] = useState<number>(100);
   const [spsMatchActive, setSpsMatchActive] = useState<boolean>(false);
   const [spsP1Score, setSpsP1Score] = useState(0);
   const [spsP2Score, setSpsP2Score] = useState(0);
   const [spsRound, setSpsRound] = useState(1);
-  const [spsStatus, setSpsStatus] = useState<'IDLE' | 'COUNTDOWN' | 'REVEAL' | 'MATCH_OVER'>('IDLE');
+  const [spsStatus, setSpsStatus] = useState<
+    'IDLE' | 'SEARCHING' | 'MATCH_CONFIRMING' | 'COUNTDOWN' | 'REVEAL' | 'MATCH_OVER'
+  >('IDLE');
   const [spsCountdown, setSpsCountdown] = useState(3);
   const [spsChoices, setSpsChoices] = useState<['Stone' | 'Paper' | 'Scissors', 'Stone' | 'Paper' | 'Scissors'] | null>(null);
   const [spsRoundWinner, setSpsRoundWinner] = useState<'P1' | 'P2' | 'DRAW' | null>(null);
+
+  // Matchmaking states
+  const [matchedOpponent, setMatchedOpponent] = useState<{
+    name: string;
+    location: string;
+    rating: number;
+  } | null>(null);
+  const [searchTimerSec, setSearchTimerSec] = useState<number>(1);
+  const searchIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const confirmTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const [matchFinalOutcome, setMatchFinalOutcome] = useState<{
     winner: 'PLAYER' | 'OPPONENT';
     playerReceived: number;
@@ -231,35 +264,87 @@ export const DiceGame: React.FC<DiceGameProps> = ({
     totalPool: number;
   } | null>(null);
 
-  // Start entire PVP Match (Locks 2x Stake = ₹200, 10% Rake = ₹20, Payout = ₹180)
-  const handleStartPvpMatch = () => {
+  // Step 1: Start Matchmaking Search (NO MONEY DEDUCTED YET!)
+  const handleStartPvpSearch = () => {
+    if (spsStake > MAX_BET_CAP) {
+      alert(language === 'hinglish' ? `सुरक्षा नियम: अधिकतम बैटल दांव ₹${MAX_BET_CAP} सीमित है।` : `Max battle stake is ₹${MAX_BET_CAP}.`);
+      return;
+    }
     if (playerStats.walletBalance < spsStake) {
       alert(language === 'hinglish' ? 'मैच एंट्री के लिए पर्याप्त बैलेंस नहीं है!' : 'Insufficient balance for match entry!');
       return;
     }
 
-    // Deduct entry fee from player wallet
-    setPlayerStats(prev => ({
-      ...prev,
-      walletBalance: prev.walletBalance - spsStake,
-    }));
-
+    // Money is NOT deducted here! First search for an opponent.
+    setSpsMatchActive(false);
     setSpsP1Score(0);
     setSpsP2Score(0);
     setSpsRound(1);
     setMatchFinalOutcome(null);
-    setSpsMatchActive(true);
-    setSpsStatus('IDLE');
+    setSpsChoices(null);
+    setSpsRoundWinner(null);
+    setMatchedOpponent(null);
+    setSpsStatus('SEARCHING');
+    setSearchTimerSec(1);
 
-    if (onRecordTransaction) {
-      onRecordTransaction({
-        id: Date.now().toString(),
-        type: 'BATTLE_STAKE',
-        amount: spsStake,
-        description: `PVP Match Entry (₹${spsStake} vs Opponent)`,
-        timestamp: new Date().toLocaleTimeString(),
-      });
-    }
+    if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
+    let elapsed = 1;
+    searchIntervalRef.current = setInterval(() => {
+      elapsed++;
+      setSearchTimerSec(elapsed);
+
+      // Opponent found at 2-3 seconds
+      if (elapsed >= 3) {
+        if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
+        const liveOpponents = [
+          { name: '@Amit_Jaipur', location: 'Jaipur, RJ', rating: 1240 },
+          { name: '@Vikram_Delhi', location: 'Delhi, DL', rating: 1290 },
+          { name: '@Rahul_Pune', location: 'Pune, MH', rating: 1180 },
+          { name: '@Suresh_Indore', location: 'Indore, MP', rating: 1260 },
+          { name: '@Karan_Lucknow', location: 'Lucknow, UP', rating: 1215 },
+          { name: '@Rohit_Mumbai', location: 'Mumbai, MH', rating: 1310 },
+        ];
+        const opp = liveOpponents[Math.floor(Math.random() * liveOpponents.length)];
+        setMatchedOpponent(opp);
+        setSpsStatus('MATCH_CONFIRMING');
+
+        // Step 2: Opponent found confirmation countdown (2 seconds)
+        confirmTimeoutRef.current = setTimeout(() => {
+          // STEP 3: DEDUCT STAKE NOW AND ONLY NOW!
+          setPlayerStats(prev => ({
+            ...prev,
+            walletBalance: prev.walletBalance - spsStake,
+          }));
+
+          playCashChime();
+          setSpsMatchActive(true);
+          setSpsStatus('IDLE');
+
+          // Record Match Stake in Live Transactions
+          if (onRecordTransaction) {
+            onRecordTransaction({
+              id: Date.now().toString(),
+              type: 'BATTLE_STAKE',
+              amount: spsStake,
+              description: `PVP Escrow Pool Locked (₹${spsStake} vs ${opp.name})`,
+              timestamp: new Date().toLocaleTimeString(),
+              username: userProfile?.username || '@Tiger_King99',
+              mobile: userProfile?.mobile,
+              location: userProfile?.location || 'Jaipur, RJ',
+            });
+          }
+        }, 2200);
+      }
+    }, 1000);
+  };
+
+  // Cancel Matchmaking: 0 money was deducted, no refund required!
+  const handleCancelSearch = () => {
+    if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
+    if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current);
+    setSpsStatus('IDLE');
+    setSpsMatchActive(false);
+    setMatchedOpponent(null);
   };
 
   const startSpsRoundRoll = () => {
@@ -331,8 +416,11 @@ export const DiceGame: React.FC<DiceGameProps> = ({
                 rake: rake,
                 description: isPlayerWinner
                   ? `PVP Battle Victory! Won ₹${winnerPayout} (Pool ₹${totalPool}, Rake ₹${rake})`
-                  : `PVP Battle Defeat (Opponent won ₹${winnerPayout}, Rake ₹${rake})`,
+                  : `PVP Defeat (${matchedOpponent?.name || 'Amit'} won ₹${winnerPayout}, Rake ₹${rake})`,
                 timestamp: new Date().toLocaleTimeString(),
+                username: userProfile?.username || '@Tiger_King99',
+                mobile: userProfile?.mobile,
+                location: userProfile?.location || 'Jaipur, RJ',
               });
             }
 
@@ -355,6 +443,7 @@ export const DiceGame: React.FC<DiceGameProps> = ({
 
   // =========================================================================
   // 3. WEEKLY TOURNAMENT MODE (10-Rolls Ticket & ₹1.5L Leaderboard)
+  // Channel 4: 20% Tournament Ticket Operator Margin
   // =========================================================================
   const [tournamentActive, setTournamentActive] = useState<boolean>(false);
   const [rollsLeft, setRollsLeft] = useState<number>(10);
@@ -396,18 +485,25 @@ export const DiceGame: React.FC<DiceGameProps> = ({
     setTournamentFinished(false);
     setLastRollBreakdown('');
 
+    // 20% platform ticket margin = ₹20 operator profit, ₹80 to tournament pool
+    const tournamentMargin = 20;
+
     if (onRecordTransaction) {
       onRecordTransaction({
         id: Date.now().toString(),
         type: 'TOURNAMENT_ENTRY',
         amount: ticketPrice,
-        description: 'Weekly Dice Grand Tournament Entry Ticket',
+        rake: tournamentMargin,
+        description: 'Weekly Mega Tournament Entry Ticket (10 Rolls)',
         timestamp: new Date().toLocaleTimeString(),
+        username: userProfile?.username || '@Tiger_King99',
+        mobile: userProfile?.mobile,
+        location: userProfile?.location || 'Jaipur, RJ',
       });
     }
 
     if (onUpdateOwnerRevenue) {
-      onUpdateOwnerRevenue(ticketPrice, 0, Math.round(ticketPrice * 0.15), Math.round(ticketPrice * 0.85));
+      onUpdateOwnerRevenue(ticketPrice, 0, 0, 0, tournamentMargin, 0);
     }
   };
 
@@ -820,64 +916,142 @@ export const DiceGame: React.FC<DiceGameProps> = ({
             </div>
           </div>
 
-          {/* If Match is NOT active: Show Stake Selection & Start Button */}
+          {/* If Match is NOT active: Show Stake Selection, Searching Radar, or Match Confirmation */}
           {!spsMatchActive ? (
             <div className="max-w-md mx-auto py-8 text-center space-y-6">
-              <div className="w-20 h-20 rounded-3xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center mx-auto text-teal-300">
-                <Swords className="w-10 h-10 animate-bounce" />
-              </div>
+              {/* STATE 1: SEARCHING RADAR */}
+              {spsStatus === 'SEARCHING' && (
+                <div className="bg-slate-950 border border-teal-500/40 p-8 rounded-3xl space-y-6 animate-in zoom-in duration-300">
+                  <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
+                    <span className="absolute w-full h-full rounded-full border border-teal-500/30 animate-ping" />
+                    <span className="absolute w-16 h-16 rounded-full border border-teal-400/50 animate-pulse" />
+                    <div className="w-12 h-12 rounded-2xl bg-teal-500/20 border border-teal-400 flex items-center justify-center text-teal-300">
+                      <Search className="w-6 h-6 animate-spin" />
+                    </div>
+                  </div>
 
-              <div>
-                <h4 className="text-xl font-bold text-slate-100">
-                  {language === 'hinglish' ? 'मैच एंट्री फीस चुनें' : 'Select Battle Entry Fee'}
-                </h4>
-                <p className="text-xs text-slate-400 mt-1">
-                  {language === 'hinglish' ? 'विरोधी खिलाड़ी (अमित / बॉट) भी इतनी ही राशि जमा करेगा।' : 'Opponent will match your entry stake.'}
-                </p>
-              </div>
+                  <div>
+                    <h4 className="text-xl font-black text-slate-100">
+                      {language === 'hinglish' ? 'सक्रिय खिलाड़ी की तलाश जारी है...' : 'Searching for Active Opponent...'}
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-1 font-mono">
+                      {language === 'hinglish'
+                        ? `₹${spsStake} दांव के लिए लाइव खिलाड़ी खोज रहे हैं... (${searchTimerSec}s)`
+                        : `Matching with online players for ₹${spsStake} duel... (${searchTimerSec}s)`}
+                    </p>
+                    <div className="mt-3 inline-block px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-[11px] text-emerald-400 font-bold">
+                      {language === 'hinglish' ? '✓ सुरक्षित: खिलाड़ी मिलने से पहले कोई पैसा नहीं कटेगा' : '✓ Safe: Stake deducted only after match is confirmed'}
+                    </div>
+                  </div>
 
-              {/* Stake Buttons */}
-              <div className="grid grid-cols-4 gap-2">
-                {[50, 100, 250, 500].map((amt) => (
                   <button
-                    key={amt}
-                    onClick={() => setSpsStake(amt)}
-                    className={`py-2 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
-                      spsStake === amt
-                        ? 'bg-teal-500 text-slate-950 border-teal-400 shadow-md shadow-teal-500/20'
-                        : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
-                    }`}
+                    onClick={handleCancelSearch}
+                    className="px-6 py-2.5 rounded-xl bg-slate-900 border border-rose-500/40 hover:border-rose-400 text-rose-300 font-bold text-xs flex items-center justify-center gap-2 mx-auto cursor-pointer transition-colors"
                   >
-                    ₹{amt}
+                    <XCircle className="w-4 h-4 text-rose-400" />
+                    <span>{language === 'hinglish' ? 'खोज रद्द करें (Cancel Search)' : 'Cancel Search'}</span>
                   </button>
-                ))}
-              </div>
+                </div>
+              )}
 
-              <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs space-y-1 text-left">
-                <div className="flex justify-between text-slate-400">
-                  <span>{language === 'hinglish' ? 'आपकी एंट्री फीस:' : 'Your Entry:'}</span>
-                  <span className="font-mono text-slate-200">₹{spsStake}</span>
-                </div>
-                <div className="flex justify-between text-slate-400">
-                  <span>{language === 'hinglish' ? 'विरोधी की एंट्री:' : 'Opponent Entry:'}</span>
-                  <span className="font-mono text-slate-200">₹{spsStake}</span>
-                </div>
-                <div className="flex justify-between text-slate-400">
-                  <span>{language === 'hinglish' ? 'प्लेटफॉर्म रेक (10%):' : 'Platform Rake (10%):'}</span>
-                  <span className="font-mono text-amber-400">-₹{Math.round(spsStake * 2 * 0.1)}</span>
-                </div>
-                <div className="border-t border-slate-800 pt-1.5 flex justify-between font-bold text-emerald-400">
-                  <span>{language === 'hinglish' ? 'विजेता को मिलेगा (90%):' : 'Winner Takes (90%):'}</span>
-                  <span className="font-mono text-sm">₹{Math.round(spsStake * 2 * 0.9)}</span>
-                </div>
-              </div>
+              {/* STATE 2: MATCH CONFIRMATION */}
+              {spsStatus === 'MATCH_CONFIRMING' && matchedOpponent && (
+                <div className="bg-slate-950 border border-emerald-500/50 p-7 rounded-3xl space-y-5 animate-in zoom-in duration-300">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400 flex items-center justify-center text-emerald-300 mx-auto">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
 
-              <button
-                onClick={handleStartPvpMatch}
-                className="w-full py-4 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-black rounded-2xl shadow-xl shadow-teal-500/20 text-sm uppercase tracking-wide cursor-pointer transition-transform active:scale-95"
-              >
-                {language === 'hinglish' ? `₹${spsStake} एंट्री लॉक करें और मैच शुरू करें` : `LOCK ₹${spsStake} & START MATCH`}
-              </button>
+                  <div>
+                    <div className="text-xs font-bold text-emerald-400 uppercase tracking-widest">
+                      {language === 'hinglish' ? 'प्रतिद्वंदी मिल गया!' : 'Opponent Found!'}
+                    </div>
+                    <h4 className="text-xl font-black text-slate-100 mt-0.5">
+                      {matchedOpponent.name} ({matchedOpponent.location})
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {language === 'hinglish'
+                        ? `दोनों खिलाड़ियों के वॉलेट से ₹${spsStake} दांव लॉक हो रहा है...`
+                        : `Locking ₹${spsStake} stake from both wallets into escrow...`}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-4 bg-slate-900 p-3.5 rounded-2xl border border-slate-800 text-xs font-mono">
+                    <div className="text-teal-300 font-bold">
+                      {userProfile?.username || '@You'} (₹{spsStake})
+                    </div>
+                    <div className="text-amber-400 font-black">VS</div>
+                    <div className="text-rose-300 font-bold">
+                      {matchedOpponent.name} (₹{spsStake})
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-amber-400 font-semibold animate-pulse">
+                    {language === 'hinglish' ? 'मैच शुरू होने जा रहा है... 2s' : 'Launching battle arena... 2s'}
+                  </div>
+                </div>
+              )}
+
+              {/* STATE 3: IDLE STAKE SELECTION & SEARCH BUTTON */}
+              {spsStatus === 'IDLE' && (
+                <>
+                  <div className="w-20 h-20 rounded-3xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center mx-auto text-teal-300">
+                    <Swords className="w-10 h-10 animate-bounce" />
+                  </div>
+
+                  <div>
+                    <h4 className="text-xl font-bold text-slate-100">
+                      {language === 'hinglish' ? 'मैच एंट्री फीस चुनें' : 'Select Battle Entry Fee'}
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {language === 'hinglish' ? 'पहले खिलाड़ी ढूंढा जाएगा, मुकाबला कंफर्म होने पर ही पैसे कटेंगे।' : 'Find opponent first. Stake is deducted only after confirmation.'}
+                    </p>
+                  </div>
+
+                  {/* Stake Buttons */}
+                  <div className="grid grid-cols-4 gap-2">
+                    {[50, 100, 250, 500].map((amt) => (
+                      <button
+                        key={amt}
+                        onClick={() => setSpsStake(amt)}
+                        className={`py-2 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
+                          spsStake === amt
+                            ? 'bg-teal-500 text-slate-950 border-teal-400 shadow-md shadow-teal-500/20'
+                            : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+                        }`}
+                      >
+                        ₹{amt}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs space-y-1 text-left">
+                    <div className="flex justify-between text-slate-400">
+                      <span>{language === 'hinglish' ? 'आपकी एंट्री फीस:' : 'Your Entry:'}</span>
+                      <span className="font-mono text-slate-200">₹{spsStake}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400">
+                      <span>{language === 'hinglish' ? 'विरोधी की एंट्री:' : 'Opponent Entry:'}</span>
+                      <span className="font-mono text-slate-200">₹{spsStake}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400">
+                      <span>{language === 'hinglish' ? 'प्लेटफॉर्म रेक (10%):' : 'Platform Rake (10%):'}</span>
+                      <span className="font-mono text-amber-400">-₹{Math.round(spsStake * 2 * 0.1)}</span>
+                    </div>
+                    <div className="border-t border-slate-800 pt-1.5 flex justify-between font-bold text-emerald-400">
+                      <span>{language === 'hinglish' ? 'विजेता को मिलेगा (90%):' : 'Winner Takes (90%):'}</span>
+                      <span className="font-mono text-sm">₹{Math.round(spsStake * 2 * 0.9)}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleStartPvpSearch}
+                    className="w-full py-4 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-black rounded-2xl shadow-xl shadow-teal-500/20 text-sm uppercase tracking-wide cursor-pointer transition-transform active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <Search className="w-4 h-4" />
+                    <span>{language === 'hinglish' ? `खिलाड़ी खोजें (दांव ₹${spsStake})` : `FIND OPPONENT (ENTRY ₹${spsStake})`}</span>
+                  </button>
+                </>
+              )}
             </div>
           ) : (
             /* Active Live Match Arena */
@@ -889,7 +1063,7 @@ export const DiceGame: React.FC<DiceGameProps> = ({
                     YOU
                   </div>
                   <div>
-                    <div className="text-[10px] text-slate-400 uppercase">You (Rahul)</div>
+                    <div className="text-[10px] text-slate-400 uppercase">You ({userProfile?.username || '@Tiger_King99'})</div>
                     <div className="text-2xl font-black text-teal-300">{spsP1Score} / 3</div>
                   </div>
                 </div>
@@ -903,11 +1077,11 @@ export const DiceGame: React.FC<DiceGameProps> = ({
 
                 <div className="flex items-center gap-3 text-right">
                   <div>
-                    <div className="text-[10px] text-slate-400 uppercase">Opponent (Amit)</div>
+                    <div className="text-[10px] text-slate-400 uppercase">Opponent ({matchedOpponent?.name || '@Amit_Jaipur'})</div>
                     <div className="text-2xl font-black text-rose-300">{spsP2Score} / 3</div>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-300 font-bold">
-                    BOT
+                    OPP
                   </div>
                 </div>
               </div>

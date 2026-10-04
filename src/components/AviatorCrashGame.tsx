@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, TrendingUp, DollarSign, ShieldCheck, RefreshCw, Award, CheckCircle2, Lock, ArrowUpRight } from 'lucide-react';
-import { PlayerStats, TransactionRecord } from '../types';
+import { PlayerStats, TransactionRecord, UserProfile } from '../types';
 import { playCashChime, playLossBuzzer } from '../utils/audio';
 
 interface AviatorCrashProps {
@@ -9,6 +9,7 @@ interface AviatorCrashProps {
   setPlayerStats: React.Dispatch<React.SetStateAction<PlayerStats>>;
   onRecordTransaction?: (tx: TransactionRecord) => void;
   onUpdateOwnerRevenue?: (wager: number, payout: number, pvpRake: number, houseEdge: number) => void;
+  userProfile?: UserProfile;
 }
 
 interface CrashHistory {
@@ -23,6 +24,7 @@ export const AviatorCrashGame: React.FC<AviatorCrashProps> = ({
   setPlayerStats,
   onRecordTransaction,
   onUpdateOwnerRevenue,
+  userProfile,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -122,6 +124,9 @@ export const AviatorCrashGame: React.FC<AviatorCrashProps> = ({
               amount: stake,
               description: `Aviator Crashed @ ${crashPointRef.current}x (Lost ₹${stake})`,
               timestamp: new Date().toLocaleTimeString(),
+              username: userProfile?.username || '@Tiger_King99',
+              mobile: userProfile?.mobile,
+              location: userProfile?.location || 'Jaipur, RJ',
             });
           }
           if (onUpdateOwnerRevenue) {
@@ -145,6 +150,10 @@ export const AviatorCrashGame: React.FC<AviatorCrashProps> = ({
 
   // Place bet
   const handlePlaceBet = () => {
+    if (stake > 1000) {
+      alert(language === 'hinglish' ? 'सुरक्षा नियम: प्लेटफॉर्म बैंक सुरक्षा के लिए अधिकतम दांव ₹1,000 सीमित है।' : 'Max stake allowed is ₹1,000.');
+      return;
+    }
     if (playerStats.walletBalance < stake) {
       alert(language === 'hinglish' ? 'वॉलेट में बैलेंस कम है!' : 'Insufficient wallet balance!');
       return;
@@ -161,6 +170,9 @@ export const AviatorCrashGame: React.FC<AviatorCrashProps> = ({
         amount: stake,
         description: `Aviator Flight Bet Placed (₹${stake})`,
         timestamp: new Date().toLocaleTimeString(),
+        username: userProfile?.username || '@Tiger_King99',
+        mobile: userProfile?.mobile,
+        location: userProfile?.location || 'Jaipur, RJ',
       });
     }
 
@@ -187,6 +199,9 @@ export const AviatorCrashGame: React.FC<AviatorCrashProps> = ({
         amount: payout,
         description: `Aviator Cashed Out @ ${finalMult}x (Won ₹${payout})`,
         timestamp: new Date().toLocaleTimeString(),
+        username: userProfile?.username || '@Tiger_King99',
+        mobile: userProfile?.mobile,
+        location: userProfile?.location || 'Jaipur, RJ',
       });
     }
     if (onUpdateOwnerRevenue) {

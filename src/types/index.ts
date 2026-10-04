@@ -54,6 +54,18 @@ export interface ShotRecord {
   commentary: string;
 }
 
+export interface UserProfile {
+  username: string; // e.g., '@Tiger_King99'
+  fullName: string;
+  mobile: string;
+  email: string;
+  location: string;
+  referralCode: string;
+  referredBy?: string;
+  totalReferralsCount: number;
+  totalReferralEarnings: number;
+}
+
 export interface PlayerStats {
   matchesPlayed: number;
   totalRuns: number;
@@ -83,15 +95,31 @@ export interface OwnerRevenueStats {
   houseEdgeProfit: number;
   pvpRakeEarned: number;
   withdrawalFeesEarned: number;
+  tournamentMarginEarned: number;
+  referralNetMargin: number;
   netOwnerProfit: number;
   activePlayersToday: number;
+  reservePoolVault: number;
 }
 
 export interface TransactionRecord {
   id: string;
-  type: 'DEPOSIT' | 'WITHDRAW' | 'BET_CASINO' | 'WIN_CASINO' | 'BATTLE_STAKE' | 'BATTLE_WIN' | 'BATTLE_RAKE' | 'TOURNAMENT_ENTRY' | 'TOURNAMENT_PRIZE';
+  type:
+    | 'DEPOSIT'
+    | 'WITHDRAW'
+    | 'BET_CASINO'
+    | 'WIN_CASINO'
+    | 'BATTLE_STAKE'
+    | 'BATTLE_WIN'
+    | 'BATTLE_RAKE'
+    | 'TOURNAMENT_ENTRY'
+    | 'TOURNAMENT_PRIZE'
+    | 'REFERRAL_BONUS';
   amount: number;
   rake?: number;
   description: string;
   timestamp: string;
+  username: string;
+  mobile?: string;
+  location: string;
 }

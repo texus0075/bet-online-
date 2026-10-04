@@ -1,6 +1,7 @@
 import React from 'react';
-import { Volume2, VolumeX, Globe, PlusCircle, ArrowDownRight, Flame, Dices, PieChart } from 'lucide-react';
+import { Volume2, VolumeX, Globe, PlusCircle, ArrowDownRight, Flame, Dices, PieChart, User, Gift } from 'lucide-react';
 import { getSoundMuted, setSoundMuted } from '../utils/audio';
+import { UserProfile } from '../types';
 
 interface NavbarProps {
   activeView: 'DICE' | 'CRASH';
@@ -11,6 +12,9 @@ interface NavbarProps {
   onOpenDeposit: () => void;
   onOpenWithdraw: () => void;
   onOpenAdmin: () => void;
+  userProfile: UserProfile;
+  onOpenProfile: () => void;
+  onOpenReferral: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -22,6 +26,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenDeposit,
   onOpenWithdraw,
   onOpenAdmin,
+  userProfile,
+  onOpenProfile,
+  onOpenReferral,
 }) => {
   const [isMuted, setIsMuted] = React.useState(getSoundMuted());
 
@@ -97,8 +104,28 @@ export const Navbar: React.FC<NavbarProps> = ({
           })}
         </nav>
 
-        {/* Primary Actions (Wallet, Deposit, Withdraw, Admin, Language, Sound) */}
+        {/* Primary Actions (Player Profile, Referral, Wallet, Deposit, Withdraw, Admin, Language, Sound) */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Player Profile Handle Button */}
+          <button
+            onClick={onOpenProfile}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-400 text-slate-200 text-xs font-semibold cursor-pointer transition-all"
+            title={language === 'hinglish' ? 'प्लेयर प्रोफाइल' : 'Player Profile'}
+          >
+            <User className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden md:inline font-mono font-bold text-amber-300">{userProfile.username}</span>
+          </button>
+
+          {/* Referral Program Shortcut */}
+          <button
+            onClick={onOpenReferral}
+            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-purple-950/60 border border-purple-500/40 hover:border-purple-400 text-purple-300 text-xs font-bold cursor-pointer transition-all"
+            title={language === 'hinglish' ? 'रेफरल प्रोग्राम (2% कमीशन)' : 'Referral Program (2%)'}
+          >
+            <Gift className="w-3.5 h-3.5 text-purple-400" />
+            <span>{language === 'hinglish' ? 'रेफरल (2%)' : 'Refer (2%)'}</span>
+          </button>
+
           {/* Wallet Balance Display */}
           <div className="flex items-center gap-1.5 bg-slate-900 border border-emerald-500/30 px-3 py-1.5 rounded-xl">
             <div className="flex flex-col text-right">

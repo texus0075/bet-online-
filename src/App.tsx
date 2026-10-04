@@ -11,8 +11,9 @@ import { AviatorCrashGame } from './components/AviatorCrashGame';
 import { DepositModal } from './components/DepositModal';
 import { WithdrawModal } from './components/WithdrawModal';
 import { AdminOwnerPanel } from './components/AdminOwnerPanel';
-import { PlayerStats, OwnerRevenueStats, TransactionRecord } from './types';
-import { Flame, Dices, PlusCircle, ArrowDownRight, PieChart, ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
+import { UserProfileModal } from './components/UserProfileModal';
+import { PlayerStats, OwnerRevenueStats, TransactionRecord, UserProfile } from './types';
+import { Flame, Dices, PlusCircle, ArrowDownRight, PieChart, ShieldCheck, Sparkles, CheckCircle2, User, Gift } from 'lucide-react';
 
 export default function App() {
   const [activeView, setActiveView] = useState<'DICE' | 'CRASH'>('DICE');
@@ -22,6 +23,19 @@ export default function App() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+
+  // Player Profile & Referral Identity
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    username: '@Tiger_King99',
+    fullName: 'Rahul Sharma',
+    mobile: '+91 98765 43210',
+    email: 'rahul.vip@gmail.com',
+    location: 'Jaipur, Rajasthan',
+    referralCode: 'VIP-CRIC-7892',
+    totalReferralsCount: 4,
+    totalReferralEarnings: 1450,
+  });
 
   // Global Player stats
   const [playerStats, setPlayerStats] = useState<PlayerStats>({
@@ -37,18 +51,21 @@ export default function App() {
     antiCheatTrustScore: 100,
   });
 
-  // Owner Revenue & Platform Financial Tracker
+  // Owner Revenue & Platform Financial Tracker (5 Active Revenue Streams)
   const [revenueStats, setRevenueStats] = useState<OwnerRevenueStats>({
     totalWagered: 145000,
     totalPayouts: 132400,
     houseEdgeProfit: 7800,
     pvpRakeEarned: 4600,
     withdrawalFeesEarned: 1200,
-    netOwnerProfit: 13600,
+    tournamentMarginEarned: 2400,
+    referralNetMargin: 1100,
+    netOwnerProfit: 17100,
     activePlayersToday: 184,
+    reservePoolVault: 100000,
   });
 
-  // Live Audit Ledger Transactions
+  // Live Audit Ledger Transactions with Player Metadata
   const [transactions, setTransactions] = useState<TransactionRecord[]>([
     {
       id: 'tx_1',
@@ -57,6 +74,9 @@ export default function App() {
       rake: 20,
       description: 'PVP SPS Battle Rake Collected (Rahul vs Amit)',
       timestamp: '14:20:15',
+      username: '@Tiger_King99',
+      mobile: '+91 98765 43210',
+      location: 'Jaipur, RJ',
     },
     {
       id: 'tx_2',
@@ -64,6 +84,8 @@ export default function App() {
       amount: 1075,
       description: 'Player Won Under 7 Bet (₹500 @ 2.15x)',
       timestamp: '14:15:30',
+      username: '@Vikram_99',
+      location: 'Delhi, DL',
     },
     {
       id: 'tx_3',
@@ -71,6 +93,9 @@ export default function App() {
       amount: 500,
       description: 'Player Lost Over 7 Bet (₹500 to House)',
       timestamp: '14:10:02',
+      username: '@Tiger_King99',
+      mobile: '+91 98765 43210',
+      location: 'Jaipur, RJ',
     },
     {
       id: 'tx_4',
@@ -78,6 +103,19 @@ export default function App() {
       amount: 2000,
       description: 'UPI Deposit via PhonePe (UTR 42198031)',
       timestamp: '14:02:11',
+      username: '@Tiger_King99',
+      mobile: '+91 98765 43210',
+      location: 'Jaipur, RJ',
+    },
+    {
+      id: 'tx_5',
+      type: 'REFERRAL_BONUS',
+      amount: 50,
+      description: 'Referral Royalties from Friend (@Amit_Jaipur)',
+      timestamp: '13:45:00',
+      username: '@Tiger_King99',
+      mobile: '+91 98765 43210',
+      location: 'Jaipur, RJ',
     },
   ]);
 
@@ -85,19 +123,30 @@ export default function App() {
     setTransactions(prev => [tx, ...prev.slice(0, 49)]);
   };
 
-  const handleUpdateOwnerRevenue = (wager: number, payout: number, pvpRake: number, houseEdge: number) => {
+  const handleUpdateOwnerRevenue = (
+    wager: number,
+    payout: number,
+    pvpRake: number,
+    houseEdge: number,
+    tournamentMargin: number = 0,
+    referralMargin: number = 0
+  ) => {
     setRevenueStats(prev => {
       const newWagered = prev.totalWagered + wager;
       const newPayouts = prev.totalPayouts + payout;
       const newHouseEdge = prev.houseEdgeProfit + houseEdge;
       const newPvpRake = prev.pvpRakeEarned + pvpRake;
-      const newNetProfit = newHouseEdge + newPvpRake + prev.withdrawalFeesEarned;
+      const newTourn = prev.tournamentMarginEarned + tournamentMargin;
+      const newRef = prev.referralNetMargin + referralMargin;
+      const newNetProfit = newHouseEdge + newPvpRake + prev.withdrawalFeesEarned + newTourn + newRef;
       return {
         ...prev,
         totalWagered: newWagered,
         totalPayouts: newPayouts,
         houseEdgeProfit: newHouseEdge,
         pvpRakeEarned: newPvpRake,
+        tournamentMarginEarned: newTourn,
+        referralNetMargin: newRef,
         netOwnerProfit: newNetProfit,
       };
     });
@@ -114,6 +163,9 @@ export default function App() {
       amount,
       description: `Instant UPI Deposit (+₹${amount})`,
       timestamp: new Date().toLocaleTimeString(),
+      username: userProfile.username,
+      mobile: userProfile.mobile,
+      location: userProfile.location,
     });
   };
 
@@ -134,6 +186,9 @@ export default function App() {
       rake: fee,
       description: `Bank Withdrawal Dispatched (Fee: ₹${fee})`,
       timestamp: new Date().toLocaleTimeString(),
+      username: userProfile.username,
+      mobile: userProfile.mobile,
+      location: userProfile.location,
     });
   };
 
@@ -149,6 +204,9 @@ export default function App() {
         onOpenDeposit={() => setDepositModalOpen(true)}
         onOpenWithdraw={() => setWithdrawModalOpen(true)}
         onOpenAdmin={() => setAdminPanelOpen(true)}
+        userProfile={userProfile}
+        onOpenProfile={() => setProfileModalOpen(true)}
+        onOpenReferral={() => setProfileModalOpen(true)}
       />
 
       {/* Main Container */}
@@ -267,6 +325,7 @@ export default function App() {
               setPlayerStats={setPlayerStats}
               onRecordTransaction={handleRecordTransaction}
               onUpdateOwnerRevenue={handleUpdateOwnerRevenue}
+              userProfile={userProfile}
             />
           </section>
         )}
@@ -279,6 +338,7 @@ export default function App() {
               setPlayerStats={setPlayerStats}
               onRecordTransaction={handleRecordTransaction}
               onUpdateOwnerRevenue={handleUpdateOwnerRevenue}
+              userProfile={userProfile}
             />
           </section>
         )}
@@ -311,6 +371,18 @@ export default function App() {
         language={language}
         revenueStats={revenueStats}
         transactions={transactions}
+      />
+
+      {/* Player Profile & Referral Network Modal */}
+      <UserProfileModal
+        isOpen={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        language={language}
+        userProfile={userProfile}
+        setUserProfile={setUserProfile}
+        playerStats={playerStats}
+        setPlayerStats={setPlayerStats}
+        onRecordTransaction={handleRecordTransaction}
       />
     </div>
   );
