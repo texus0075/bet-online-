@@ -1,0 +1,6 @@
+{
+  "name": "CricStrike VIP - Real-Time Batting Arena & Architecture Blueprint",
+  "description": "Premier real-time cricket batting game platform, realistic bowling physics engine, server-authoritative matchmaking architecture, anti-cheat protocols, and monetization blueprints.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
